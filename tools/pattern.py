@@ -6,8 +6,8 @@
 
 import sys
 import argparse
-import numpy as np
-from PIL import Image
+import numpy as np # type: ignore
+from PIL import Image # type: ignore
 
 
 # In[2]:

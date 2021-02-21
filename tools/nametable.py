@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import sys
 import json
 import argparse
-import numpy as np
+import numpy as np # type: ignore
+from typing import Optional
 
 
-# In[11]:
+# In[ ]:
 
 
-def __find_layer(document: dict, name: str) -> dict:
+def __find_layer(document: dict, name: str) -> Optional[dict]:
     layer = None
     for item in document["layers"]:        
         if item["name"] == name:
@@ -22,7 +23,7 @@ def __find_layer(document: dict, name: str) -> dict:
     return layer
 
 
-# In[7]:
+# In[ ]:
 
 
 def __validate_layer(layer: dict) -> bool:
@@ -37,7 +38,7 @@ def __validate_layer(layer: dict) -> bool:
     return result
 
 
-# In[3]:
+# In[ ]:
 
 
 def export_nametable(nametable: dict, palettes: dict) -> bytes:
@@ -72,7 +73,7 @@ def export_nametable(nametable: dict, palettes: dict) -> bytes:
     return bytes(data)
 
 
-# In[4]:
+# In[ ]:
 
 
 def export_8_bits(layer: dict) -> bytes:
@@ -84,7 +85,7 @@ def export_8_bits(layer: dict) -> bytes:
     for y in range(0, hcount):
         for x in range(0, wcount):
             data += level[y,:,x,:].flatten().tolist()
-                    
+
     return bytes(data)
 
 
@@ -105,14 +106,14 @@ def export_2_bits(layer: dict) -> bytes:
                 
             for j in range(0, 15):
                 for i in range(0, 16):
-                    value = (a[j,1,i,1] << 6) | (a[j,1,i,0] << 4)
-                    value |= (a[j,0,i,1] << 2) | a[j,0,i,0]
+                    value = (tile[j,1,i,1] << 6) | (tile[j,1,i,0] << 4)
+                    value |= (tile[j,0,i,1] << 2) | tile[j,0,i,0]
                     data.append(value)
                     
     return bytes(data)
 
 
-# In[5]:
+# In[ ]:
 
 
 def main(argv: list) -> int:
@@ -132,8 +133,8 @@ def main(argv: list) -> int:
         layer = __find_layer(document, arguments.layer)        
         if layer:
             data = export_8_bits(layer)
-            with open(arguments.output, 'wb') as f:
-                f.write(data)
+            with open(arguments.output, 'wb') as f1:
+                f1.write(data)
         else:
             print("Error: invalid layer name")
             result = -1
@@ -141,8 +142,8 @@ def main(argv: list) -> int:
         layer = __find_layer(document, arguments.layer)        
         if layer:
             data = export_2_bits(layer)
-            with open(arguments.output, 'wb') as f:
-                f.write(data)
+            with open(arguments.output, 'wb') as f2:
+                f2.write(data)
         else:
             print("Error: invalid layer name")
             result = -1
@@ -151,8 +152,8 @@ def main(argv: list) -> int:
         palettes = __find_layer(document, 'palettes')
         if nametable and palettes:
             data = export_nametable(nametable, palettes)
-            with open(arguments.output, 'wb') as f:
-                f.write(data)
+            with open(arguments.output, 'wb') as f3:
+                f3.write(data)
         else:
             print("Error: missing layers 'nametable' or 'palettes'")
             result = -1
