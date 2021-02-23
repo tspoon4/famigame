@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import sys
@@ -49,8 +49,8 @@ def export_nametable(nametable: dict, palettes: dict) -> bytes:
     
     data = list()
     hcount, wcount = nametable["height"] // 30, nametable["width"] // 32
-    namearray = np.array(nametable["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32)
-    palettearray = np.array(palettes["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32)
+    namearray = np.array(nametable["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32) - 1
+    palettearray = np.array(palettes["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32) - 1
     for y in range(0, hcount):
         for x in range(0, wcount):
             data += namearray[y,:,x,:].flatten().tolist()
@@ -81,7 +81,7 @@ def export_8_bits(layer: dict) -> bytes:
     
     data = list()
     hcount, wcount = layer["height"] // 30, layer["width"] // 32
-    level = np.array(layer["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32)
+    level = np.array(layer["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32) - 1
     for y in range(0, hcount):
         for x in range(0, wcount):
             data += level[y,:,x,:].flatten().tolist()
@@ -97,7 +97,7 @@ def export_2_bits(layer: dict) -> bytes:
     
     data = list()
     hcount, wcount = layer["height"] // 30, layer["width"] // 32
-    level = np.array(layer["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32)
+    level = np.array(layer["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32) - 1
     for y in range(0, hcount):
         for x in range(0, wcount):
             tile = level[y,:,x,:].reshape((15, 2, 16, 2))            
