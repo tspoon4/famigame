@@ -25,13 +25,11 @@ mylevel1:
 .incbin "level.nmt"
 
 ; Tuning level size
-LEVEL_WEXP = 1
-LEVEL_HEXP = 1
+LEVEL_W = 2
+LEVEL_H = 2
 ; Deduced constants, don't modify!
 LEVEL_WADD = 4
-LEVEL_HADD = LEVEL_WADD << LEVEL_WEXP
-LEVEL_WMASK = (LEVEL_WADD << LEVEL_WEXP) - 1
-LEVEL_HMASK = (LEVEL_HADD << LEVEL_HEXP) - 1
+LEVEL_HADD = LEVEL_WADD * LEVEL_W
 
 
 .segment "CODE"
@@ -57,7 +55,6 @@ level_init:
 	jsr scroll_update
 	lda #0
 	sta scroll_nmt
-
 	rts
 
 
@@ -78,7 +75,6 @@ level_update:
 				sec
 				lda __level_screen_x
 				sbc #LEVEL_WADD
-				and #LEVEL_WMASK
 				sta __level_screen_x
 			:
 			cpx #LEVEL_RIGHT
@@ -86,7 +82,6 @@ level_update:
 				clc
 				lda __level_screen_x
 				adc #LEVEL_WADD
-				and #LEVEL_WMASK
 				sta __level_screen_x
 			:
 			cpx #LEVEL_UP
@@ -94,7 +89,6 @@ level_update:
 				sec
 				lda __level_screen_y
 				sbc #LEVEL_HADD
-				and #LEVEL_HMASK
 				sta __level_screen_y
 			:
 			cpx #LEVEL_DOWN
@@ -102,7 +96,6 @@ level_update:
 				clc
 				lda __level_screen_y
 				adc #LEVEL_HADD
-				and #LEVEL_HMASK
 				sta __level_screen_y
 			:
 
