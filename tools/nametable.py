@@ -1,7 +1,7 @@
-
+#!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[10]:
 
 
 import sys
@@ -11,46 +11,66 @@ import numpy as np # type: ignore
 from typing import Optional
 
 
-# In[ ]:
+# In[11]:
 
 
-def __find_layer(document: dict, name: str) -> Optional[dict]:
-    layer = None
+def __find_layer(document: dict, name: str) -> (Optional[dict], int):
+    layer, index = None, -1    
+    # Iterate over layers table to find the name
+    count = 0
     for item in document["layers"]:        
         if item["name"] == name:
-            layer = item
+            layer, index = item, count
             break
-    return layer
+        count += 1
+        
+    return layer, index
 
 
-# In[ ]:
+# In[21]:
 
 
-def __validate_layer(layer: dict) -> bool:
+def __validate_document(document: dict) -> bool:
     result = True
-    if layer["type"] != 'tilelayer':
+    # Check tile dimensions
+    if document["tilewidth"] != 8 or document["tileheight"] != 8:
         result &= False
-    if layer["width"] % 32 != 0:
+        print("Error: Tile dimension is not 8x8")
+    # Check layer dimensions and layer type    
+    for layer in document["layers"]:
+        if layer["type"] != 'tilelayer':
+            result &= False
+            print("Error: layer is not a tilelayer type")
+        if layer["width"] % 32 != 0:
+            result &= False
+            print("Error: layer width is not a multiple of 32")
+        if layer["height"] % 30 != 0:
+            result &= False
+            print("Error: layer height is not a multiple of 30")
+    # Check tileset count is the same as layer count, later assuming 
+    if len(document["tilesets"]) != len(document["layers"]):
         result &= False
-    if layer["height"] % 30 != 0:
-        result &= False
-    
-    return result
+        print("Error: tilesets count is not the same as layers count")
+
+    return result        
 
 
-# In[ ]:
+# In[22]:
 
 
-def export_nametable(nametable: dict, palettes: dict) -> bytes:
-    assert __validate_layer(nametable)
-    assert __validate_layer(palettes)
-    assert nametable["height"] == palettes["height"]
-    assert nametable["width"] == palettes["width"]
-    
+def export_nametable(document: dict, nametable: str, palettes: str) -> bytes:
     data = list()
-    hcount, wcount = nametable["height"] // 30, nametable["width"] // 32
-    namearray = np.array(nametable["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32) - 1
-    palettearray = np.array(palettes["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32) - 1
+    tilesets = document["tilesets"]
+    
+    nt, ni = __find_layer(document, nametable)
+    pt, pi = __find_layer(document, palettes)
+    hcount, wcount = nt["height"] // 30, nt["width"] // 32
+    
+    namearray = np.array(nt["data"]).reshape(hcount, 30, wcount, 32) - tilesets[ni]["firstgid"]
+    palettearray = np.array(pt["data"]).reshape(hcount, 30, wcount, 32) - tilesets[pi]["firstgid"]
+    namearray = namearray.astype(dtype=np.uint8)
+    palettearray = palettearray.astype(dtype=np.uint8)
+    
     for y in range(0, hcount):
         for x in range(0, wcount):
             data += namearray[y,:,x,:].flatten().tolist()
@@ -73,15 +93,18 @@ def export_nametable(nametable: dict, palettes: dict) -> bytes:
     return bytes(data)
 
 
-# In[ ]:
+# In[25]:
 
 
-def export_8_bits(layer: dict) -> bytes:
-    assert __validate_layer(layer)
-    
+def export_8_bits(document: dict, layer: str) -> bytes:
     data = list()
-    hcount, wcount = layer["height"] // 30, layer["width"] // 32
-    level = np.array(layer["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32) - 1
+    tilesets = document["tilesets"]
+
+    lr, li = __find_layer(document, layer)
+    hcount, wcount = lr["height"] // 30, lr["width"] // 32    
+    level = np.array(lr["data"]).reshape(hcount, 30, wcount, 32) - tilesets[li]["firstgid"]
+    level = level.astype(dtype=np.uint8)
+    
     for y in range(0, hcount):
         for x in range(0, wcount):
             data += level[y,:,x,:].flatten().tolist()
@@ -89,15 +112,18 @@ def export_8_bits(layer: dict) -> bytes:
     return bytes(data)
 
 
-# In[ ]:
+# In[26]:
 
 
-def export_2_bits(layer: dict) -> bytes:
-    assert __validate_layer(layer)
-    
+def export_2_bits(document: dict, layer: str) -> bytes:
     data = list()
-    hcount, wcount = layer["height"] // 30, layer["width"] // 32
-    level = np.array(layer["data"], dtype=np.uint8).reshape(hcount, 30, wcount, 32) - 1
+    tilesets = document["tilesets"]
+
+    lr, li = __find_layer(document, layer)
+    hcount, wcount = lr["height"] // 30, lr["width"] // 32    
+    level = np.array(lr["data"]).reshape(hcount, 30, wcount, 32) - tilesets[li]["firstgid"]
+    level = level.astype(dtype=np.uint8)
+    
     for y in range(0, hcount):
         for x in range(0, wcount):
             tile = level[y,:,x,:].reshape((15, 2, 16, 2))            
@@ -113,7 +139,7 @@ def export_2_bits(layer: dict) -> bytes:
     return bytes(data)
 
 
-# In[ ]:
+# In[27]:
 
 
 def main(argv: list) -> int:
@@ -130,33 +156,20 @@ def main(argv: list) -> int:
         document = json.load(f)
     
     if arguments.b8:
-        layer = __find_layer(document, arguments.layer)        
-        if layer:
-            data = export_8_bits(layer)
+        data = export_8_bits(document, arguments.layer)
+        if len(data) > 0:
             with open(arguments.output, 'wb') as f1:
                 f1.write(data)
-        else:
-            print("Error: invalid layer name")
-            result = -1
     elif arguments.b2:
-        layer = __find_layer(document, arguments.layer)        
-        if layer:
-            data = export_2_bits(layer)
+        data = export_2_bits(document, arguments.layer)
+        if len(data) > 0:
             with open(arguments.output, 'wb') as f2:
                 f2.write(data)
-        else:
-            print("Error: invalid layer name")
-            result = -1
     else:
-        nametable = __find_layer(document, 'nametable')        
-        palettes = __find_layer(document, 'palettes')
-        if nametable and palettes:
-            data = export_nametable(nametable, palettes)
+        data = export_nametable(document, 'nametable', 'palettes')
+        if len(data) > 0:
             with open(arguments.output, 'wb') as f3:
                 f3.write(data)
-        else:
-            print("Error: missing layers 'nametable' or 'palettes'")
-            result = -1
 
     return result
 

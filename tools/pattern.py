@@ -78,7 +78,7 @@ def main(argv: list) -> int:
         if img.mode != 'L':
             img = img.convert(mode='L')
             print('Warning: input file format is not grayscale, automatic conversion...')            
-        image = np.array(img)
+        image = np.asarray(img)
         image = validate_image(image)
         data = image_to_pattern(image)
         with open(arguments.output, 'wb') as f:
